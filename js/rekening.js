@@ -1,8 +1,8 @@
 //  Declare SQL Query for SQLite
-var createStatement = "CREATE TABLE IF NOT EXISTS Rekening (id INTEGER PRIMARY KEY AUTOINCREMENT, koderekening TEXT UNIQUE, namarekening TEXT, jenisrekening TEXT, saldonormal TEXT)";
+var createStatement = "CREATE TABLE IF NOT EXISTS Rekening (id INTEGER PRIMARY KEY AUTOINCREMENT, koderekening TEXT UNIQUE, namarekening TEXT, jenisrekening TEXT, saldonormal TEXT, is_transaction TEXT)";
 var selectAllStatement = "SELECT * FROM Rekening ORDER BY koderekening ASC";
-var insertStatement = "INSERT INTO Rekening (koderekening, namarekening, jenisrekening, saldonormal) VALUES (?, ?, ?, ?)";
-var updateStatement = "UPDATE Rekening SET koderekening = ?, namarekening = ?, jenisrekening = ?, saldonormal = ? WHERE id=?";
+var insertStatement = "INSERT INTO Rekening (koderekening, namarekening, jenisrekening, saldonormal, is_transaction) VALUES (?, ?, ?, ?, ?)";
+var updateStatement = "UPDATE Rekening SET koderekening = ?, namarekening = ?, jenisrekening = ?, saldonormal = ?, is_transaction = ? WHERE id=?";
 var deleteStatement = "DELETE FROM Rekening WHERE id=?";
 var dropStatement = "DROP TABLE Rekening";
 var db = openDatabase("DanaBookJogjaide", "1.0", "Dana Book", 200000); // Open SQLite Database
@@ -44,12 +44,17 @@ function insertRecord() // Get value from Input and insert record . Function Cal
 	if($('input:text[id=namarekening]').val() == ""){
 		return;
 	}
+	if($('#is_transaction').is(":checked")){
+		is_transaction = "Ya";
+	} else {
+		is_transaction = "Tidak";
+	}
     var koderekeningtemp = $('input:text[id=koderekening]').val();
     var namarekeningtemp = $('input:text[id=namarekening]').val();
     var jenisrekeningtemp = $('#jenisrekening').val();
     var saldonormaltemp = $('#saldonormal').val();
     db.transaction(function(tx) {
-        tx.executeSql(insertStatement, [koderekeningtemp, namarekeningtemp, jenisrekeningtemp, saldonormaltemp], loadAndReset, onError);
+        tx.executeSql(insertStatement, [koderekeningtemp, namarekeningtemp, jenisrekeningtemp, saldonormaltemp, is_transaction], loadAndReset, onError);
     });
     //tx.executeSql(SQL Query Statement,[ Parameters ] , Sucess Result Handler Function, Error Result Handler Function );
 }
@@ -89,13 +94,18 @@ function deleteRecord(id) // Get id of record . Function Call when Delete Button
 
 function updateRecord() // Get id of record . Function Call when Delete Button Click..
 {
+	if($('#is_transaction').is(":checked")){
+		is_transaction = "Ya";
+	} else {
+		is_transaction = "Tidak";
+	}
     var koderekeningupdate = $('input:text[id=koderekening]').val().toString();
     var namarekeningupdate = $('input:text[id=namarekening]').val().toString();
     var jenisrekeningtemp = $('#jenisrekening').val().toString();
     var saldonormaltemp = $('#saldonormal').val().toString();
     var useridupdate = $("#id").val();
     db.transaction(function(tx) {
-        tx.executeSql(updateStatement, [koderekeningupdate, namarekeningupdate, jenisrekeningtemp, saldonormaltemp, Number(useridupdate)], loadAndReset, onError);
+        tx.executeSql(updateStatement, [koderekeningupdate, namarekeningupdate, jenisrekeningtemp, saldonormaltemp, is_transaction, Number(useridupdate)], loadAndReset, onError);
     });
 }
 
@@ -137,6 +147,13 @@ function loadRecord(i) // Function for display records which are retrived from d
     $("#namarekening").val((item['namarekening']).toString());
     $("#jenisrekening").val((item['jenisrekening']).toString());
     $("#saldonormal").val((item['saldonormal']).toString());
+	
+	if(item['is_transaction']=="Ya"){
+		$("#is_transaction").prop('checked', true);
+	} else {
+		$("#is_transaction").prop('checked', false);
+	}
+	
     $("#id").val((item['id']).toString());
 }
 
@@ -191,6 +208,41 @@ function uploadrekening(){
 	
 }
 
+
+function login(){
+	
+		$.ajax({
+                type: "post",
+                url: SERVER_API+"/api/user/login",
+				headers: {"x-api-key": X_API},
+                data: {
+                    username:  $("#email").val(),
+                    password:  $("#password").val()
+                },
+                dataType: "json",
+                success: function (response) {
+                    if(response.status == false) {
+                      
+                    } else {
+						var uuid = (new Date().getTime()).toString(36);
+						sessionStorage.setItem("aztira_cust_token", response.token);
+						sessionStorage.setItem("aztira_cust_name", response.data.full_name);
+						sessionStorage.setItem("aztira_cust_username", response.data.username);
+						sessionStorage.setItem("aztira_cust_email", response.data.email);
+						sessionStorage.setItem("aztira_cust_id", response.data.uuid);
+						sessionStorage.setItem("aztira_cust_uuid", uuid);
+						swal("Login Success", response.message, "success");
+						//window.location.href = "home.html";
+					}
+				}, 
+				error: function(res){
+					alert("E-mail, Username or Password do not match.");
+				}
+            });
+	
+}
+
+
 $(document).ready(function() // Call function when page is ready for load..
     {
         ;
@@ -201,4 +253,5 @@ $(document).ready(function() // Call function when page is ready for load..
         $("#btnReset").click(resetForm);
         $("#btnDrop").click(dropTable);
         $("#uploadrekening").click(uploadrekening);
+        $("#login").click(login);
     });
